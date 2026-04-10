@@ -1,51 +1,62 @@
-Abwandlung der AR-Demo von:edoardomignano  Link: https://github.com/edoardomignano/ar-demo
-diese version wurde um einen Datenupload und Sharing Funktion erweitert. 
-
-
-🚀 AR Model Viewer
-Ein leichtgewichtiger, webbasierter 3D-Modell-Viewer mit Augmented Reality (AR) Unterstützung. Lade deine .glb-Dateien hoch, betrachte sie im Browser und teile sie per Link mit anderen.
+🚀 AR Model Viewer (Extreme Performance Edition)
+Eine erweiterte Version der AR-Demo von edoardomignano. Diese Fassung wurde um ein leistungsstarkes Cloud-Hosting, eine Sharing-Funktion und ein Echtzeit-Performance-Monitoring ergänzt.
 
 ✨ Features
 3D Viewer: Interaktive Ansicht von Modellen (Rotation, Zoom, Fullscreen).
 
-AR-Modus: Betrachte Modelle in deiner echten Umgebung (unterstützt WebXR, Scene-Viewer und Quick-Look).
+AR-Modus: Native AR-Projektion via WebXR, Scene-Viewer (Android) und Quick-Look (iOS).
 
-Cloud-Upload: Automatischer Upload zu Litterbox (Catbox). Erzeugt einen teilbaren Link, der 24 Stunden gültig ist.
+Performance Monitoring (Neu): Integrierter FPS-Zähler und Frametime-Analyse via Stats.js.
 
-Mobile Ready: Optimiert für Smartphones und Tablets.
+Uncapped Rendering: Optimierter Loop für maximale GPU-Auslastung jenseits der 60-FPS-Grenze (Benchmarking-ready).
 
-Deep Linking: Parameter-Unterstützung (?model=URL), um Modelle direkt über die URL zu laden.
+GPU-Detection: Automatische Erkennung und Anzeige der aktiven Grafikeinheit.
+
+Cloud-Upload: Automatischer Upload zu Litterbox (Catbox) mit 24-Stunden-Gültigkeit.
+
+Deep Linking: Sofortiges Laden von Modellen über URL-Parameter (?model=URL).
 
 🛠️ Technologien
-Frontend: HTML5, CSS3, JavaScript (ES6+).
+3D Engine: Google Model-Viewer
 
-3D Rendering: Google Model-Viewer.
+Performance Tracking: Stats.js
 
-Hosting/API: Litterbox für temporäres Asset-Hosting.
+Backend API: Litterbox (Temporäres Asset-Hosting)
+
+Frontend: HTML5, CSS3, JavaScript (ES6+)
 
 🚀 Installation & Nutzung
-Da es sich um eine reine Client-seitige HTML-Datei handelt, ist keine Installation notwendig:
+Da die Anwendung rein Client-seitig läuft, ist kein Server-Setup erforderlich:
 
 Klone das Repository:
 
 Bash
 git clone https://github.com/DEIN-BENUTZERNAME/ar-model-viewer.git
-Öffne die index.html in einem modernen Webbrowser.
+Lokal testen: Öffne die index.html in einem modernen Browser.
 
-Wichtig: Für die AR-Funktionen muss die Seite über HTTPS aufgerufen werden (z. B. via GitHub Pages).
+Deployment: Für AR-Funktionen muss die Seite über HTTPS bereitgestellt werden (empfohlen: GitHub Pages).
+
+📊 Performance & Benchmarking
+Diese Version ist darauf ausgelegt, das Maximum aus deiner Hardware zu holen:
+
+FPS Anzeige: Oben links siehst du die aktuellen Bilder pro Sekunde.
+
+GPU Info: Oben rechts wird der Renderer (z. B. NVIDIA RTX oder Intel Iris) angezeigt.
+
+Uncapped Mode: Der interne Loop nutzt setTimeout(..., 0) anstelle von requestAnimationFrame, um die GPU-Zyklen unabhängig von der Monitor-Bildwiederholfrequenz zu messen.
+
+Tipp: Um die 60-FPS-Sperre des Browsers komplett aufzuheben, starte Chrome mit dem Flag --disable-frame-rate-limit.
 
 📖 Bedienung
-Modell wählen: Ziehe eine .glb-Datei in das Upload-Feld oder klicke darauf.
+Modell wählen: Lade eine .glb-Datei per Klick oder Drag & Drop hoch.
 
-Warten: Das Modell wird hochgeladen und im Viewer initialisiert.
+Upload & Share: Sobald das Modell geladen ist, wird ein Sharing-Link und ein QR-Code generiert.
 
-Teilen: Kopiere den generierten Link unter dem Viewer, um ihn an Freunde oder Kollegen zu senden.
+AR starten: Scanne den QR-Code mit einem Smartphone, um das Modell in deiner Umgebung zu platzieren.
 
-AR: Klicke auf dem Smartphone auf "AR starten", um das Modell in den Raum zu projizieren.
+⚠️ Einschränkungen & Hinweise
+Dateiformat: Nur .glb (GLTF Binary) wird unterstützt.
 
-⚠️ Einschränkungen
-Dateityp: Aktuell werden nur .glb (GLTF Binary) Dateien unterstützt.
+Speicherdauer: Uploads werden nach 24 Stunden vom Hoster (Litterbox) gelöscht.
 
-Gültigkeit: Da Litterbox genutzt wird, werden hochgeladene Dateien nach 24 Stunden automatisch gelöscht.
-
-Browser-Support: AR-Funktionen erfordern Chrome (Android) oder Safari (iOS mit Quick Look Support).
+V-Sync: Viele Browser deckeln die Anzeige standardmäßig bei 60 FPS, um Energie zu sparen. Die tatsächliche Rechenleistung der GPU kann im Uncapped-Mode jedoch höher liegen.
