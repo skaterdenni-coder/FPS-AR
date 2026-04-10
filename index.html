@@ -3,10 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Extreme AR Viewer | Uncapped Benchmarking</title>
+  <title>Extreme AR Viewer | Batch Benchmark Pro</title>
   
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/stats.js/16/Stats.min.js"></script>
   
   <style>
@@ -15,199 +14,223 @@
       --accent:#66fcf1; --danger:#ff4c4c; --success:#155724;
     }
     * { box-sizing: border-box; }
-    body{ margin:0; font-family: 'Segoe UI', Roboto, Arial, sans-serif; background:var(--bg); color:var(--text); }
-    .wrap{ max-width: 980px; margin: 0 auto; padding: 20px 16px 40px; text-align:center; }
-    h1{ margin: 0 0 10px; font-size: 28px; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; }
+    body{ margin:0; font-family: 'Segoe UI', Roboto, Arial, sans-serif; background:var(--bg); color:var(--text); overflow-x: hidden; }
+    .wrap{ max-width: 1000px; margin: 0 auto; padding: 20px 16px; text-align:center; }
+    h1{ margin: 0 0 10px; font-size: 24px; font-weight: 800; color: var(--accent); text-transform: uppercase; }
     
     .card{ background:var(--card); border:1px solid var(--border); border-radius:14px; padding: 20px; margin: 10px auto; }
     
     .uploadBox{
       background: rgba(69, 162, 158, 0.05); border: 2px dashed var(--accent);
-      border-radius: 12px; padding: 25px; text-align: center; cursor: pointer;
+      border-radius: 12px; padding: 30px; text-align: center; cursor: pointer;
     }
     .uploadBox p { margin: 0; color: var(--accent); font-weight: bold; }
     .uploadBox input{ display: none; }
-    
-    .status{ padding: 12px; margin: 10px 0; border-radius: 6px; display: none; font-size: 14px; font-weight: 600; }
-    .status.success{ display: block; background: var(--success); color: #d4edda; }
-    .status.loading{ display: block; background: #0c5460; color: #d1ecf1; }
 
+    /* Performance UI */
     .viewerBox{ background:var(--card); border:1px solid var(--border); border-radius:14px; padding: 10px; margin-top: 15px; display: none; position: relative; }
-    .viewerBox.active{ display: block; }
-    
-    #stats-container { position: absolute; top: 15px; left: 15px; z-index: 10; pointer-events: none; }
+    #stats-container { position: absolute; top: 15px; left: 15px; z-index: 10; filter: invert(1) hue-rotate(180deg); }
 
-    .stress-overlay {
+    .test-status-overlay {
       position: absolute; top: 15px; right: 15px; z-index: 11;
-      background: rgba(11, 12, 16, 0.9); padding: 15px; border-radius: 10px;
-      border: 1px solid var(--border); text-align: right; min-width: 160px;
+      background: rgba(11, 12, 16, 0.95); padding: 15px; border-radius: 10px;
+      border: 1px solid var(--border); text-align: right; min-width: 200px;
     }
-    .stress-overlay.running { border-color: var(--danger); box-shadow: 0 0 15px rgba(255, 76, 76, 0.3); }
-    .stress-timer { font-size: 18px; font-weight: 800; color: var(--accent); }
-    .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 12px; margin-top: 8px; border-top: 1px solid #333; padding-top: 8px; }
-    .val { color: var(--accent); font-weight: bold; font-family: monospace; }
-    
-    model-viewer{ width: 100%; height: 65vh; min-height: 400px; background: #000; border-radius: 10px; }
-    .viewerBar{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin: 15px 0 5px; }
-    button.ui{ border:1px solid var(--border); background:transparent; color:var(--accent); border-radius: 8px; padding: 10px 16px; font-weight: 700; cursor:pointer; }
-    button.stress-btn { width: 100%; margin-top: 10px; font-size: 10px; background: rgba(102, 252, 241, 0.1); }
-    button.stress-btn.active { color: var(--danger); border-color: var(--danger); opacity: 0.8; }
+    .test-status-overlay.active { border-color: var(--danger); box-shadow: 0 0 20px rgba(255, 76, 76, 0.4); }
 
-    #shareArea { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; margin-top: 15px; display:none; }
-    .shareLinkBox { background: #000; border: 1px solid #333; padding: 8px; margin-top: 5px; border-radius: 5px; font-family: monospace; font-size: 10px; color: var(--accent); cursor: pointer; word-break: break-all; }
+    /* Ergebnis-Tabelle */
+    .results-table-container { margin-top: 20px; overflow-x: auto; display: none; }
+    table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--border); font-size: 13px; }
+    th, td { padding: 12px; border: 1px solid #333; text-align: left; }
+    th { background: rgba(102, 252, 241, 0.1); color: var(--accent); }
+    tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+    .val-avg { font-weight: bold; color: var(--accent); }
+
+    model-viewer{ width: 100%; height: 60vh; background: #000; border-radius: 10px; }
+    
+    .btn-row { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
+    button.ui {
+      border: 1px solid var(--border); background: transparent; color: var(--accent);
+      border-radius: 8px; padding: 12px 20px; font-weight: 700; cursor: pointer; text-transform: uppercase;
+    }
+    button.ui:hover { background: var(--border); color: #000; }
+    button.primary { background: var(--accent); color: #000; border: none; }
+    button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    #current-file-name { color: var(--accent); font-family: monospace; font-size: 14px; margin-bottom: 5px; display: block; }
   </style>
 </head>
 
 <body>
   <div class="wrap">
-    <h1>Extreme AR Viewer</h1>
+    <h1>AR Batch Benchmarking</h1>
     
     <div class="card" id="uploadCard">
       <div class="uploadBox" id="uploadBox">
-        <p>📁 .GLB MODELL HOCHLADEN (UNCAPPED)</p>
-        <input type="file" id="fileInput" accept=".glb" />
+        <p>📁 MEHRERE .GLB DATEIEN WÄHLEN</p>
+        <input type="file" id="fileInput" accept=".glb" multiple />
       </div>
-      <div id="status" class="status"></div>
-      <div id="shareArea">
-        <div id="shareLinkDisplay" class="shareLinkBox" onclick="copyLink()"></div>
-        <div id="qrcode" style="margin-top:10px; display:flex; justify-content:center;"></div>
-      </div>
+      <div id="queueInfo" style="margin-top:10px; color:var(--muted);"></div>
     </div>
 
     <div class="card viewerBox" id="viewerBox">
       <div id="stats-container"></div>
-      <div class="stress-overlay" id="stressPanel">
-        <div class="stress-timer" id="stressTimer">UNCAPPED MODE</div>
-        <div class="results-grid">
-          <span>MIN:</span> <span class="val" id="minFPS">-</span>
-          <span>MAX:</span> <span class="val" id="maxFPS">-</span>
-          <span>AVG:</span> <span class="val" id="avgFPS">-</span>
-        </div>
-        <button class="ui stress-btn" id="btnStress">START STRESSTEST (60S)</button>
+      
+      <div class="test-status-overlay" id="statusPanel">
+        <span id="current-file-name">Keine Datei</span>
+        <div style="font-size: 20px; font-weight: 800; color: var(--accent);" id="timerDisplay">BEREIT</div>
+        <div id="queueProgress" style="font-size: 11px; margin-top:5px; color:var(--muted);">0 / 0 abgeschlossen</div>
+        <button class="ui primary" id="btnStartBatch" style="width:100%; margin-top:10px;">BATCH-TEST STARTEN</button>
       </div>
-      <model-viewer id="mv" camera-controls auto-rotate ar ar-modes="webxr scene-viewer quick-look" bounds="tight" power-preference="high-performance"></model-viewer>
-      <div class="viewerBar">
-        <button class="ui" id="btnReset">↩ RESET</button>
-        <button class="ui" id="btnFullscreen">⛶ VOLLBILD</button>
-        <button class="ui" id="btnAR" style="background:var(--accent); color:#000;">AR STARTEN</button>
-      </div>
+      
+      <model-viewer id="mv" camera-controls auto-rotate power-preference="high-performance"></model-viewer>
+    </div>
+
+    <div class="card results-table-container" id="resultsContainer">
+      <h3 style="color:var(--accent); margin-top:0;">Ø TESTERGEBNISSE</h3>
+      <table id="resultsTable">
+        <thead>
+          <tr>
+            <th>Dateiname</th>
+            <th>Min FPS</th>
+            <th>Max FPS</th>
+            <th>Avg FPS</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <button class="ui" style="margin-top:15px;" onclick="window.location.reload()">NEUER BATCH-TEST</button>
     </div>
   </div>
 
   <script>
     const mv = document.getElementById('mv');
     const viewerBox = document.getElementById('viewerBox');
-    const status = document.getElementById('status');
     const fileInput = document.getElementById('fileInput');
     const uploadBox = document.getElementById('uploadBox');
-    const btnStress = document.getElementById('btnStress');
-    const stressPanel = document.getElementById('stressPanel');
+    const btnStartBatch = document.getElementById('btnStartBatch');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const resultsTableBody = document.querySelector('#resultsTable tbody');
+    const resultsContainer = document.getElementById('resultsContainer');
     
     const stats = new Stats();
     stats.showPanel(0);
     document.getElementById('stats-container').appendChild(stats.dom);
 
-    // --- UNCAPPED ENGINE ---
+    let filesQueue = [];
+    let currentFileIndex = 0;
+    let isTesting = false;
+    let fpsData = [];
     let currentFps = 0;
     let lastTime = performance.now();
-    
+
+    // --- ENGINE ---
     function uncappedLoop() {
       stats.begin();
-      
       const now = performance.now();
       const delta = now - lastTime;
-      // Berechnung der theoretischen FPS basierend auf der CPU/GPU Zykluszeit
       if (delta > 0) currentFps = 1000 / delta;
       lastTime = now;
-      
+      if (isTesting && mv.updateFramebuffer) mv.updateFramebuffer();
       stats.end();
-      // Nutze setTimeout(0) um die Browser-V-Sync-Bremse zu umgehen
       setTimeout(uncappedLoop, 0);
     }
     uncappedLoop();
 
-    // --- STRESS TEST ---
-    let isTesting = false;
-    let fpsData = [];
-    let timeLeft = 60;
-
-    btnStress.onclick = () => {
-      if (isTesting) return;
-      isTesting = true;
-      fpsData = [];
-      timeLeft = 60;
-      
-      btnStress.innerText = "MESSUNG LÄUFT...";
-      btnStress.classList.add('active');
-      stressPanel.classList.add('running');
-
-      const testInterval = setInterval(() => {
-        timeLeft--;
-        document.getElementById('stressTimer').innerText = timeLeft + "s";
-        
-        // Speichere die rohen FPS-Werte
-        if (currentFps > 0 && currentFps < 10000) {
-            fpsData.push(currentFps);
-        }
-
-        if (timeLeft <= 0) {
-          clearInterval(testInterval);
-          isTesting = false;
-          btnStress.innerText = "TEST WIEDERHOLEN";
-          btnStress.classList.remove('active');
-          stressPanel.classList.remove('running');
-          document.getElementById('stressTimer').innerText = "ERGEBNIS";
-          
-          if (fpsData.length > 0) {
-            const min = Math.min(...fpsData);
-            const max = Math.max(...fpsData);
-            const avg = fpsData.reduce((a, b) => a + b) / fpsData.length;
-            
-            document.getElementById('minFPS').innerText = Math.round(min);
-            document.getElementById('maxFPS').innerText = Math.round(max);
-            document.getElementById('avgFPS').innerText = Math.round(avg);
-          }
-        }
-      }, 1000);
-    };
-
-    // --- HELPER ---
+    // --- UPLOAD / DATEI-WAHL ---
     uploadBox.onclick = () => fileInput.click();
     fileInput.onchange = (e) => {
-      const file = e.target.files[0];
-      if (file && file.name.endsWith('.glb')) {
-        mv.src = URL.createObjectURL(file);
-        viewerBox.classList.add('active');
-        handleUpload(file);
+      filesQueue = Array.from(e.target.files);
+      if (filesQueue.length > 0) {
+        document.getElementById('queueInfo').innerText = `${filesQueue.length} Datei(en) in der Warteschlange.`;
+        viewerBox.style.display = 'block';
+        updateQueueUI();
+        loadModel(0);
       }
     };
 
-    async function handleUpload(file) {
-      status.textContent = "🚀 Upload..."; status.className = "status loading"; status.style.display = "block";
-      const fd = new FormData(); fd.append('reqtype', 'fileupload'); fd.append('time', '24h'); fd.append('fileToUpload', file);
-      try {
-        const res = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', { method: 'POST', body: fd });
-        const fileUrl = await res.text();
-        if (fileUrl.startsWith('http')) {
-          const shareUrl = window.location.origin + window.location.pathname + '?model=' + encodeURIComponent(fileUrl);
-          document.getElementById('shareLinkDisplay').textContent = shareUrl;
-          document.getElementById('qrcode').innerHTML = "";
-          new QRCode(document.getElementById('qrcode'), { text: shareUrl, width: 90, height: 90 });
-          document.getElementById('shareArea').style.display = "block";
-          status.textContent = "✅ Link aktiv"; status.className = "status success";
-        }
-      } catch(e) { status.textContent = "⚠️ Fehler beim Upload"; }
+    function loadModel(index) {
+      if (!filesQueue[index]) return;
+      const file = filesQueue[index];
+      mv.src = URL.createObjectURL(file);
+      document.getElementById('current-file-name').innerText = file.name;
     }
 
-    window.copyLink = () => { navigator.clipboard.writeText(document.getElementById('shareLinkDisplay').textContent).then(() => alert("Kopiert!")); };
-    document.getElementById('btnReset').onclick = () => { mv.cameraOrbit = '0deg 75deg auto'; };
-    document.getElementById('btnFullscreen').onclick = () => { viewerBox.requestFullscreen(); };
-    document.getElementById('btnAR').onclick = () => { mv.activateAR(); };
+    function updateQueueUI() {
+      document.getElementById('queueProgress').innerText = `${currentFileIndex} / ${filesQueue.length} abgeschlossen`;
+    }
 
-    window.addEventListener('load', () => {
-      const modelUrl = new URLSearchParams(window.location.search).get('model');
-      if (modelUrl) { mv.src = modelUrl; viewerBox.classList.add('active'); }
-    });
+    // --- BATCH-LOGIK ---
+    btnStartBatch.onclick = async () => {
+      if (isTesting || filesQueue.length === 0) return;
+      
+      btnStartBatch.disabled = true;
+      resultsContainer.style.display = 'none';
+      resultsTableBody.innerHTML = '';
+      currentFileIndex = 0;
+
+      for (let i = 0; i < filesQueue.length; i++) {
+        currentFileIndex = i;
+        updateQueueUI();
+        loadModel(i);
+        
+        // Kurze Pause zum Laden des Modells
+        timerDisplay.innerText = "LADE...";
+        await new Promise(r => setTimeout(r, 2000)); 
+
+        // Starte 60s Messung
+        await runSingleTest(filesQueue[i].name);
+      }
+
+      // Ende aller Tests
+      timerDisplay.innerText = "ALLE FERTIG";
+      resultsContainer.style.display = 'block';
+      btnStartBatch.disabled = false;
+      btnStartBatch.innerText = "TESTS ABGESCHLOSSEN";
+    };
+
+    function runSingleTest(fileName) {
+      return new Promise((resolve) => {
+        isTesting = true;
+        fpsData = [];
+        let timeLeft = 60;
+        document.getElementById('statusPanel').classList.add('active');
+
+        const interval = setInterval(() => {
+          timeLeft--;
+          timerDisplay.innerText = timeLeft + "s";
+          
+          if (currentFps > 0 && currentFps < 10000) fpsData.push(currentFps);
+
+          if (timeLeft <= 0) {
+            clearInterval(interval);
+            isTesting = false;
+            document.getElementById('statusPanel').classList.remove('active');
+            
+            // Ergebnis speichern
+            saveResult(fileName, fpsData);
+            resolve();
+          }
+        }, 1000);
+      });
+    }
+
+    function saveResult(name, data) {
+      const min = Math.round(Math.min(...data)) || 0;
+      const max = Math.round(Math.max(...data)) || 0;
+      const avg = Math.round(data.reduce((a, b) => a + b, 0) / data.length) || 0;
+
+      const row = `<tr>
+        <td>${name}</td>
+        <td>${min}</td>
+        <td>${max}</td>
+        <td class="val-avg">${char(248)} ${avg}</td>
+      </tr>`;
+      resultsTableBody.insertAdjacentHTML('beforeend', row);
+      resultsContainer.style.display = 'block'; // Tabelle währenddessen füllen
+    }
+
+    function char(code) { return String.fromCharCode(code); }
   </script>
 </body>
 </html>
