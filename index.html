@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FPS AR Model Viewer (Uncapped)</title>
+  
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/stats.js/16/Stats.min.js"></script>
+  
+  <style>
+    :root{
+      --bg:#0b0c10; --text:#c5c6c7; --muted:#8b8d8e; --card:#1f2833; --border:#45a29e;
+      --accent:#66fcf1; --btn2:#45a29e;
+    }
+    * { box-sizing: border-box; }
+    body{ margin:0; font-family: 'Segoe UI', Arial, sans-serif; background:var(--bg); color:var(--text); }
+    .wrap{ max-width: 980px; margin: 0 auto; padding: 26px 16px 42px; text-align:center; }
+    h1{ margin: 6px 0 10px; font-size: 34px; font-weight: 800; color: var(--accent); }
+    
+    .card{
+      background:var(--card); border:1px solid var(--border); border-radius:14px;
+      padding: 20px; margin: 14px auto;
+      box-shadow: 0 0 15px rgba(102, 252, 241, 0.1);
+    }
+    
+    .uploadBox{
+      background: rgba(69, 162, 158, 0.1); border: 2px dashed var(--accent);
+      border-radius: 12px; padding: 30px 20px; text-align: center;
+      cursor: pointer; transition: 0.3s;
+    }
+    .uploadBox:hover { background: rgba(69, 162, 158, 0.2); }
+    .uploadBox p{ margin: 0; color: var(--accent); font-weight: bold; }
+    .uploadBox input{ display: none; }
+    
+    .status{ padding: 12px; margin: 10px 0; border-radius: 6px; display: none; font-weight: 600; }
+    .status.success{ display: block; background: #155724; color: #d4edda; }
+    .status.loading{ display: block; background: #0c5460; color: #d1ecf1; }
+
+    #shareArea { display: none; margin-top: 15px; }
+    .shareLinkBox {
+      background: #0b0c10; border: 1px solid var(--border); padding: 10px;
+      margin-top: 5px; border-radius: 8px; font-family: monospace;
+      font-size: 11px; color: var(--accent); cursor: pointer; word-break: break-all;
+    }
+
+    .viewerBox{
+      background:var(--card); border:1px solid var(--border); border-radius:14px;
+      padding: 12px; margin-top: 18px; display: none; position: relative;
+    }
+    .viewerBox.active{ display: block; }
+    
+    #stats-container {
+      position: absolute; top: 20px; left: 20px; z-index: 10; opacity: 0.9;
+    }
+
+    #gpu-info {
+      position: absolute; top: 20px; right: 20px; z-index: 10;
+      background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 4px;
+      font-size: 10px; color: var(--accent); pointer-events: none; text-align: right;
+    }
+    
+    model-viewer{
+      width: 100%; height: 65vh; min-height: 400px;
+      background:#000; border-radius: 12px; border: 1px solid var(--border);
+    }
+    
+    .viewerBar{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin: 12px 0 0; }
+    button.ui{
+      border:1px solid var(--border); background:transparent; color:var(--accent);
+      border-radius: 10px; padding: 10px 18px; font-weight: 700; cursor:pointer;
+      transition: 0.2s;
+    }
+    button.ui:hover { background: var(--border); color: #000; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <h1>FPS AR Viewer</h1>
+    <p>Uncapped Performance Mode</p>
+
+    <div class="card" id="uploadCard">
+      <div class="uploadBox" id="uploadBox">
+        <p>🚀 MODEL HOCHLADEN (.GLB)</p>
+        <input type="file" id="fileInput" accept=".glb" />
+      </div>
+      <div id="status" class="status"></div>
+      
+      <div id="shareArea">
+        <div id="shareLinkDisplay" class="shareLinkBox" onclick="copyLink()"></div>
+        <div id="qrcode" style="margin-top:10px; display:flex; justify-content:center;"></div>
+      </div>
+    </div>
+
+    <div class="card viewerBox" id="viewerBox">
+      <div id="stats-container"></div>
+      <div id="gpu-info">Wird erkannt...</div>
+      
+      <model-viewer id="mv" 
+        camera-controls 
+        auto-rotate 
+        ar 
+        ar-modes="webxr scene-viewer quick-look" 
+        bounds="tight" 
+        power-preference="high-performance"
+        interpolation-decay="0">
+      </model-viewer>
+      
+      <div class="viewerBar">
+        <button class="ui" id="btnReset">↩️ Reset</button>
+        <button class="ui" id="btnFullscreen">⛶ Vollbild</button>
+        <button class="ui" id="btnAR">AR starten</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const mv = document.getElementById('mv');
+    const viewerBox = document.getElementById('viewerBox');
+    const status = document.getElementById('status');
+    const fileInput = document.getElementById('fileInput');
+    const uploadBox = document.getElementById('uploadBox');
+    const shareArea = document.getElementById('shareArea');
+    const shareLinkDisplay = document.getElementById('shareLinkDisplay');
+    const qrcodeDiv = document.getElementById('qrcode');
+    const gpuInfoDisplay = document.getElementById('gpu-info');
+
+    // --- GPU INFO AUSLESEN ---
+    function getGPU() {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      if (!gl) return "Kein WebGL";
+      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+      return debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : "GPU Unbekannt";
+    }
+    gpuInfoDisplay.innerText = "GPU: " + getGPU();
+
+    // --- PERFORMANCE MONITOR (UNCAPPED) ---
+    const stats = new Stats();
+    stats.showPanel(0); 
+    document.getElementById('stats-container').appendChild(stats.dom);
+
+    // High-Frequency-Loop für Uncapped FPS Benchmarking
+    function uncappedLoop() {
+      stats.begin();
+      // Wir erzwingen keine logische Änderung, sondern messen nur die CPU/GPU Zyklen
+      stats.end();
+      // 0ms Interval für maximale Frequenz
+      setTimeout(uncappedLoop, 0);
+    }
+    uncappedLoop();
+
+    let currentUrl = "";
+
+    function showStatus(msg, type) {
+      status.textContent = msg;
+      status.className = `status ${type}`;
+      status.style.display = 'block';
+    }
+
+    uploadBox.onclick = () => fileInput.click();
+    fileInput.onchange = (e) => { if (e.target.files[0]) handleUpload(e.target.files[0]); };
+
+    async function handleUpload(file) {
+      if (!file.name.endsWith('.glb')) return alert("Nur .glb!");
+      
+      mv.src = URL.createObjectURL(file);
+      viewerBox.classList.add('active');
+      showStatus("🚀 Modell geladen. Upload läuft...", "loading");
+
+      const fd = new FormData();
+      fd.append('reqtype', 'fileupload');
+      fd.append('time', '24h');
+      fd.append('fileToUpload', file);
+
+      try {
+        const res = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', { method: 'POST', body: fd });
+        const fileUrl = await res.text();
+        if (!fileUrl.startsWith('http')) throw new Error();
+
+        currentUrl = window.location.origin + window.location.pathname + '?model=' + encodeURIComponent(fileUrl);
+        shareLinkDisplay.textContent = currentUrl;
+        qrcodeDiv.innerHTML = "";
+        new QRCode(qrcodeDiv, { text: currentUrl, width: 80, height: 80 });
+        shareArea.style.display = "block";
+        showStatus("✅ Max Power Ready!", "success");
+        mv.src = fileUrl; 
+      } catch(e) {
+        showStatus("❌ Nur lokale Ansicht (Offline)", "loading");
+      }
+    }
+
+    window.copyLink = () => {
+      navigator.clipboard.writeText(currentUrl).then(() => alert("Link kopiert!"));
+    };
+
+    document.getElementById('btnReset').onclick = () => { mv.cameraOrbit = '0deg 75deg auto'; };
+    document.getElementById('btnFullscreen').onclick = () => { mv.requestFullscreen(); };
+    document.getElementById('btnAR').onclick = () => { mv.activateAR(); };
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('model')) {
+      mv.src = params.get('model');
+      viewerBox.classList.add('active');
+      showStatus("📦 Externes Modell geladen", "success");
+    }
+  </script>
+</body>
+</html>
