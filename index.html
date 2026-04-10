@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FPS AR Model Viewer (Uncapped)</title>
+  <title>Extreme AR Viewer | High Precision Benchmarking</title>
   
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -12,82 +12,62 @@
   <style>
     :root{
       --bg:#0b0c10; --text:#c5c6c7; --muted:#8b8d8e; --card:#1f2833; --border:#45a29e;
-      --accent:#66fcf1; --btn2:#45a29e;
+      --accent:#66fcf1; --danger:#ff4c4c; --success:#155724;
     }
     * { box-sizing: border-box; }
-    body{ margin:0; font-family: 'Segoe UI', Arial, sans-serif; background:var(--bg); color:var(--text); }
-    .wrap{ max-width: 980px; margin: 0 auto; padding: 26px 16px 42px; text-align:center; }
-    h1{ margin: 6px 0 10px; font-size: 34px; font-weight: 800; color: var(--accent); }
+    body{ margin:0; font-family: 'Segoe UI', Roboto, Arial, sans-serif; background:var(--bg); color:var(--text); }
+    .wrap{ max-width: 980px; margin: 0 auto; padding: 20px 16px 40px; text-align:center; }
+    h1{ margin: 0 0 10px; font-size: 28px; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; }
     
-    .card{
-      background:var(--card); border:1px solid var(--border); border-radius:14px;
-      padding: 20px; margin: 14px auto;
-      box-shadow: 0 0 15px rgba(102, 252, 241, 0.1);
-    }
+    .card{ background:var(--card); border:1px solid var(--border); border-radius:14px; padding: 20px; margin: 10px auto; }
     
     .uploadBox{
-      background: rgba(69, 162, 158, 0.1); border: 2px dashed var(--accent);
-      border-radius: 12px; padding: 30px 20px; text-align: center;
-      cursor: pointer; transition: 0.3s;
+      background: rgba(69, 162, 158, 0.05); border: 2px dashed var(--accent);
+      border-radius: 12px; padding: 25px; text-align: center; cursor: pointer;
     }
-    .uploadBox:hover { background: rgba(69, 162, 158, 0.2); }
-    .uploadBox p{ margin: 0; color: var(--accent); font-weight: bold; }
+    .uploadBox p { margin: 0; color: var(--accent); font-weight: bold; }
     .uploadBox input{ display: none; }
     
-    .status{ padding: 12px; margin: 10px 0; border-radius: 6px; display: none; font-weight: 600; }
-    .status.success{ display: block; background: #155724; color: #d4edda; }
+    .status{ padding: 12px; margin: 10px 0; border-radius: 6px; display: none; font-size: 14px; font-weight: 600; }
+    .status.success{ display: block; background: var(--success); color: #d4edda; }
     .status.loading{ display: block; background: #0c5460; color: #d1ecf1; }
 
-    #shareArea { display: none; margin-top: 15px; }
-    .shareLinkBox {
-      background: #0b0c10; border: 1px solid var(--border); padding: 10px;
-      margin-top: 5px; border-radius: 8px; font-family: monospace;
-      font-size: 11px; color: var(--accent); cursor: pointer; word-break: break-all;
-    }
-
-    .viewerBox{
-      background:var(--card); border:1px solid var(--border); border-radius:14px;
-      padding: 12px; margin-top: 18px; display: none; position: relative;
-    }
+    .viewerBox{ background:var(--card); border:1px solid var(--border); border-radius:14px; padding: 10px; margin-top: 15px; display: none; position: relative; }
     .viewerBox.active{ display: block; }
     
-    #stats-container {
-      position: absolute; top: 20px; left: 20px; z-index: 10; opacity: 0.9;
-    }
+    #stats-container { position: absolute; top: 15px; left: 15px; z-index: 10; pointer-events: none; }
 
-    #gpu-info {
-      position: absolute; top: 20px; right: 20px; z-index: 10;
-      background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 4px;
-      font-size: 10px; color: var(--accent); pointer-events: none; text-align: right;
+    .stress-overlay {
+      position: absolute; top: 15px; right: 15px; z-index: 11;
+      background: rgba(11, 12, 16, 0.9); padding: 15px; border-radius: 10px;
+      border: 1px solid var(--border); text-align: right; min-width: 160px;
     }
+    .stress-overlay.running { border-color: var(--danger); box-shadow: 0 0 15px rgba(255, 76, 76, 0.3); }
+    .stress-timer { font-size: 18px; font-weight: 800; color: var(--accent); }
+    .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 12px; margin-top: 8px; border-top: 1px solid #333; padding-top: 8px; }
+    .val { color: var(--accent); font-weight: bold; font-family: monospace; }
     
-    model-viewer{
-      width: 100%; height: 65vh; min-height: 400px;
-      background:#000; border-radius: 12px; border: 1px solid var(--border);
-    }
-    
-    .viewerBar{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin: 12px 0 0; }
-    button.ui{
-      border:1px solid var(--border); background:transparent; color:var(--accent);
-      border-radius: 10px; padding: 10px 18px; font-weight: 700; cursor:pointer;
-      transition: 0.2s;
-    }
-    button.ui:hover { background: var(--border); color: #000; }
+    model-viewer{ width: 100%; height: 65vh; min-height: 400px; background: #000; border-radius: 10px; }
+    .viewerBar{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin: 15px 0 5px; }
+    button.ui{ border:1px solid var(--border); background:transparent; color:var(--accent); border-radius: 8px; padding: 10px 16px; font-weight: 700; cursor:pointer; }
+    button.stress-btn { width: 100%; margin-top: 10px; font-size: 10px; background: rgba(102, 252, 241, 0.1); }
+    button.stress-btn.active { color: var(--danger); border-color: var(--danger); opacity: 0.5; cursor: not-allowed; }
+
+    #shareArea { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; margin-top: 15px; display:none; }
+    .shareLinkBox { background: #000; border: 1px solid #333; padding: 8px; margin-top: 5px; border-radius: 5px; font-family: monospace; font-size: 10px; color: var(--accent); cursor: pointer; word-break: break-all; }
   </style>
 </head>
 
 <body>
   <div class="wrap">
-    <h1>FPS AR Viewer</h1>
-    <p>Uncapped Performance Mode</p>
-
+    <h1>Extreme AR Viewer</h1>
+    
     <div class="card" id="uploadCard">
       <div class="uploadBox" id="uploadBox">
-        <p>🚀 MODEL HOCHLADEN (.GLB)</p>
+        <p>📁 .GLB MODELL HOCHLADEN</p>
         <input type="file" id="fileInput" accept=".glb" />
       </div>
       <div id="status" class="status"></div>
-      
       <div id="shareArea">
         <div id="shareLinkDisplay" class="shareLinkBox" onclick="copyLink()"></div>
         <div id="qrcode" style="margin-top:10px; display:flex; justify-content:center;"></div>
@@ -96,22 +76,20 @@
 
     <div class="card viewerBox" id="viewerBox">
       <div id="stats-container"></div>
-      <div id="gpu-info">Wird erkannt...</div>
-      
-      <model-viewer id="mv" 
-        camera-controls 
-        auto-rotate 
-        ar 
-        ar-modes="webxr scene-viewer quick-look" 
-        bounds="tight" 
-        power-preference="high-performance"
-        interpolation-decay="0">
-      </model-viewer>
-      
+      <div class="stress-overlay" id="stressPanel">
+        <div class="stress-timer" id="stressTimer">BEREIT</div>
+        <div class="results-grid">
+          <span>MIN:</span> <span class="val" id="minFPS">-</span>
+          <span>MAX:</span> <span class="val" id="maxFPS">-</span>
+          <span>AVG:</span> <span class="val" id="avgFPS">-</span>
+        </div>
+        <button class="ui stress-btn" id="btnStress">START TEST (60S)</button>
+      </div>
+      <model-viewer id="mv" camera-controls auto-rotate ar ar-modes="webxr scene-viewer quick-look" bounds="tight" power-preference="high-performance"></model-viewer>
       <div class="viewerBar">
-        <button class="ui" id="btnReset">↩️ Reset</button>
-        <button class="ui" id="btnFullscreen">⛶ Vollbild</button>
-        <button class="ui" id="btnAR">AR starten</button>
+        <button class="ui" id="btnReset">↩ RESET</button>
+        <button class="ui" id="btnFullscreen">⛶ VOLLBILD</button>
+        <button class="ui" id="btnAR" style="background:var(--accent); color:#000;">AR STARTEN</button>
       </div>
     </div>
   </div>
@@ -122,90 +100,114 @@
     const status = document.getElementById('status');
     const fileInput = document.getElementById('fileInput');
     const uploadBox = document.getElementById('uploadBox');
-    const shareArea = document.getElementById('shareArea');
-    const shareLinkDisplay = document.getElementById('shareLinkDisplay');
-    const qrcodeDiv = document.getElementById('qrcode');
-    const gpuInfoDisplay = document.getElementById('gpu-info');
-
-    // --- GPU INFO AUSLESEN ---
-    function getGPU() {
-      const canvas = document.createElement('canvas');
-      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-      if (!gl) return "Kein WebGL";
-      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-      return debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : "GPU Unbekannt";
-    }
-    gpuInfoDisplay.innerText = "GPU: " + getGPU();
-
-    // --- PERFORMANCE MONITOR (UNCAPPED) ---
+    const btnStress = document.getElementById('btnStress');
+    const stressPanel = document.getElementById('stressPanel');
+    
+    // Performance Monitor
     const stats = new Stats();
-    stats.showPanel(0); 
+    stats.showPanel(0);
     document.getElementById('stats-container').appendChild(stats.dom);
 
-    // High-Frequency-Loop für Uncapped FPS Benchmarking
-    function uncappedLoop() {
+    // Eigene FPS Messung für den Test (unabhängig von Stats.js Text-Output)
+    let currentFpsRealtime = 0;
+    let lastLoopTime = performance.now();
+    
+    function mainLoop() {
       stats.begin();
-      // Wir erzwingen keine logische Änderung, sondern messen nur die CPU/GPU Zyklen
+      
+      // FPS Berechnung
+      const now = performance.now();
+      const delta = now - lastLoopTime;
+      currentFpsRealtime = 1000 / delta;
+      lastLoopTime = now;
+      
       stats.end();
-      // 0ms Interval für maximale Frequenz
-      setTimeout(uncappedLoop, 0);
+      requestAnimationFrame(mainLoop);
     }
-    uncappedLoop();
+    requestAnimationFrame(mainLoop);
 
-    let currentUrl = "";
+    // --- STRESS TEST ---
+    let isTesting = false;
+    let fpsData = [];
+    let timeLeft = 60;
 
-    function showStatus(msg, type) {
-      status.textContent = msg;
-      status.className = `status ${type}`;
-      status.style.display = 'block';
-    }
+    btnStress.onclick = () => {
+      if (isTesting) return;
+      isTesting = true;
+      fpsData = [];
+      timeLeft = 60;
+      
+      btnStress.innerText = "TEST LÄUFT...";
+      btnStress.classList.add('active');
+      stressPanel.classList.add('running');
 
+      const testInterval = setInterval(() => {
+        timeLeft--;
+        document.getElementById('stressTimer').innerText = timeLeft + "s";
+        
+        // Aktuellen FPS-Wert speichern
+        if (currentFpsRealtime > 0 && currentFpsRealtime < 10000) {
+            fpsData.push(currentFpsRealtime);
+        }
+
+        if (timeLeft <= 0) {
+          clearInterval(testInterval);
+          isTesting = false;
+          btnStress.innerText = "WIEDERHOLEN";
+          btnStress.classList.remove('active');
+          stressPanel.classList.remove('running');
+          document.getElementById('stressTimer').innerText = "ENDE";
+          
+          if (fpsData.length > 0) {
+            const min = Math.min(...fpsData);
+            const max = Math.max(...fpsData);
+            const avg = fpsData.reduce((a, b) => a + b) / fpsData.length;
+            
+            document.getElementById('minFPS').innerText = Math.round(min);
+            document.getElementById('maxFPS').innerText = Math.round(max);
+            document.getElementById('avgFPS').innerText = Math.round(avg);
+          }
+        }
+      }, 1000);
+    };
+
+    // --- UPLOAD & DATEI ---
     uploadBox.onclick = () => fileInput.click();
-    fileInput.onchange = (e) => { if (e.target.files[0]) handleUpload(e.target.files[0]); };
+    fileInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file && file.name.endsWith('.glb')) {
+        mv.src = URL.createObjectURL(file);
+        viewerBox.classList.add('active');
+        handleUpload(file);
+      }
+    };
 
     async function handleUpload(file) {
-      if (!file.name.endsWith('.glb')) return alert("Nur .glb!");
-      
-      mv.src = URL.createObjectURL(file);
-      viewerBox.classList.add('active');
-      showStatus("🚀 Modell geladen. Upload läuft...", "loading");
-
-      const fd = new FormData();
-      fd.append('reqtype', 'fileupload');
-      fd.append('time', '24h');
-      fd.append('fileToUpload', file);
-
+      status.textContent = "🚀 Upload..."; status.className = "status loading"; status.style.display = "block";
+      const fd = new FormData(); fd.append('reqtype', 'fileupload'); fd.append('time', '24h'); fd.append('fileToUpload', file);
       try {
         const res = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', { method: 'POST', body: fd });
         const fileUrl = await res.text();
-        if (!fileUrl.startsWith('http')) throw new Error();
-
-        currentUrl = window.location.origin + window.location.pathname + '?model=' + encodeURIComponent(fileUrl);
-        shareLinkDisplay.textContent = currentUrl;
-        qrcodeDiv.innerHTML = "";
-        new QRCode(qrcodeDiv, { text: currentUrl, width: 80, height: 80 });
-        shareArea.style.display = "block";
-        showStatus("✅ Max Power Ready!", "success");
-        mv.src = fileUrl; 
-      } catch(e) {
-        showStatus("❌ Nur lokale Ansicht (Offline)", "loading");
-      }
+        if (fileUrl.startsWith('http')) {
+          const shareUrl = window.location.origin + window.location.pathname + '?model=' + encodeURIComponent(fileUrl);
+          document.getElementById('shareLinkDisplay').textContent = shareUrl;
+          document.getElementById('qrcode').innerHTML = "";
+          new QRCode(document.getElementById('qrcode'), { text: shareUrl, width: 90, height: 90 });
+          document.getElementById('shareArea').style.display = "block";
+          status.textContent = "✅ Bereit"; status.className = "status success";
+        }
+      } catch(e) { status.textContent = "⚠️ Nur lokal"; }
     }
 
-    window.copyLink = () => {
-      navigator.clipboard.writeText(currentUrl).then(() => alert("Link kopiert!"));
-    };
-
+    window.copyLink = () => { navigator.clipboard.writeText(document.getElementById('shareLinkDisplay').textContent).then(() => alert("Kopiert!")); };
     document.getElementById('btnReset').onclick = () => { mv.cameraOrbit = '0deg 75deg auto'; };
-    document.getElementById('btnFullscreen').onclick = () => { mv.requestFullscreen(); };
+    document.getElementById('btnFullscreen').onclick = () => { viewerBox.requestFullscreen(); };
     document.getElementById('btnAR').onclick = () => { mv.activateAR(); };
 
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('model')) {
-      mv.src = params.get('model');
-      viewerBox.classList.add('active');
-      showStatus("📦 Externes Modell geladen", "success");
-    }
+    window.addEventListener('load', () => {
+      const modelUrl = new URLSearchParams(window.location.search).get('model');
+      if (modelUrl) { mv.src = modelUrl; viewerBox.classList.add('active'); }
+    });
   </script>
 </body>
 </html>
