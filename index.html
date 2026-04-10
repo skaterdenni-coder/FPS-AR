@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Extreme AR Viewer | High Precision Benchmarking</title>
+  <title>Extreme AR Viewer | Uncapped Benchmarking</title>
   
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -51,7 +51,7 @@
     .viewerBar{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin: 15px 0 5px; }
     button.ui{ border:1px solid var(--border); background:transparent; color:var(--accent); border-radius: 8px; padding: 10px 16px; font-weight: 700; cursor:pointer; }
     button.stress-btn { width: 100%; margin-top: 10px; font-size: 10px; background: rgba(102, 252, 241, 0.1); }
-    button.stress-btn.active { color: var(--danger); border-color: var(--danger); opacity: 0.5; cursor: not-allowed; }
+    button.stress-btn.active { color: var(--danger); border-color: var(--danger); opacity: 0.8; }
 
     #shareArea { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; margin-top: 15px; display:none; }
     .shareLinkBox { background: #000; border: 1px solid #333; padding: 8px; margin-top: 5px; border-radius: 5px; font-family: monospace; font-size: 10px; color: var(--accent); cursor: pointer; word-break: break-all; }
@@ -64,7 +64,7 @@
     
     <div class="card" id="uploadCard">
       <div class="uploadBox" id="uploadBox">
-        <p>📁 .GLB MODELL HOCHLADEN</p>
+        <p>📁 .GLB MODELL HOCHLADEN (UNCAPPED)</p>
         <input type="file" id="fileInput" accept=".glb" />
       </div>
       <div id="status" class="status"></div>
@@ -77,13 +77,13 @@
     <div class="card viewerBox" id="viewerBox">
       <div id="stats-container"></div>
       <div class="stress-overlay" id="stressPanel">
-        <div class="stress-timer" id="stressTimer">BEREIT</div>
+        <div class="stress-timer" id="stressTimer">UNCAPPED MODE</div>
         <div class="results-grid">
           <span>MIN:</span> <span class="val" id="minFPS">-</span>
           <span>MAX:</span> <span class="val" id="maxFPS">-</span>
           <span>AVG:</span> <span class="val" id="avgFPS">-</span>
         </div>
-        <button class="ui stress-btn" id="btnStress">START TEST (60S)</button>
+        <button class="ui stress-btn" id="btnStress">START STRESSTEST (60S)</button>
       </div>
       <model-viewer id="mv" camera-controls auto-rotate ar ar-modes="webxr scene-viewer quick-look" bounds="tight" power-preference="high-performance"></model-viewer>
       <div class="viewerBar">
@@ -103,28 +103,28 @@
     const btnStress = document.getElementById('btnStress');
     const stressPanel = document.getElementById('stressPanel');
     
-    // Performance Monitor
     const stats = new Stats();
     stats.showPanel(0);
     document.getElementById('stats-container').appendChild(stats.dom);
 
-    // Eigene FPS Messung für den Test (unabhängig von Stats.js Text-Output)
-    let currentFpsRealtime = 0;
-    let lastLoopTime = performance.now();
+    // --- UNCAPPED ENGINE ---
+    let currentFps = 0;
+    let lastTime = performance.now();
     
-    function mainLoop() {
+    function uncappedLoop() {
       stats.begin();
       
-      // FPS Berechnung
       const now = performance.now();
-      const delta = now - lastLoopTime;
-      currentFpsRealtime = 1000 / delta;
-      lastLoopTime = now;
+      const delta = now - lastTime;
+      // Berechnung der theoretischen FPS basierend auf der CPU/GPU Zykluszeit
+      if (delta > 0) currentFps = 1000 / delta;
+      lastTime = now;
       
       stats.end();
-      requestAnimationFrame(mainLoop);
+      // Nutze setTimeout(0) um die Browser-V-Sync-Bremse zu umgehen
+      setTimeout(uncappedLoop, 0);
     }
-    requestAnimationFrame(mainLoop);
+    uncappedLoop();
 
     // --- STRESS TEST ---
     let isTesting = false;
@@ -137,7 +137,7 @@
       fpsData = [];
       timeLeft = 60;
       
-      btnStress.innerText = "TEST LÄUFT...";
+      btnStress.innerText = "MESSUNG LÄUFT...";
       btnStress.classList.add('active');
       stressPanel.classList.add('running');
 
@@ -145,18 +145,18 @@
         timeLeft--;
         document.getElementById('stressTimer').innerText = timeLeft + "s";
         
-        // Aktuellen FPS-Wert speichern
-        if (currentFpsRealtime > 0 && currentFpsRealtime < 10000) {
-            fpsData.push(currentFpsRealtime);
+        // Speichere die rohen FPS-Werte
+        if (currentFps > 0 && currentFps < 10000) {
+            fpsData.push(currentFps);
         }
 
         if (timeLeft <= 0) {
           clearInterval(testInterval);
           isTesting = false;
-          btnStress.innerText = "WIEDERHOLEN";
+          btnStress.innerText = "TEST WIEDERHOLEN";
           btnStress.classList.remove('active');
           stressPanel.classList.remove('running');
-          document.getElementById('stressTimer').innerText = "ENDE";
+          document.getElementById('stressTimer').innerText = "ERGEBNIS";
           
           if (fpsData.length > 0) {
             const min = Math.min(...fpsData);
@@ -171,7 +171,7 @@
       }, 1000);
     };
 
-    // --- UPLOAD & DATEI ---
+    // --- HELPER ---
     uploadBox.onclick = () => fileInput.click();
     fileInput.onchange = (e) => {
       const file = e.target.files[0];
@@ -194,9 +194,9 @@
           document.getElementById('qrcode').innerHTML = "";
           new QRCode(document.getElementById('qrcode'), { text: shareUrl, width: 90, height: 90 });
           document.getElementById('shareArea').style.display = "block";
-          status.textContent = "✅ Bereit"; status.className = "status success";
+          status.textContent = "✅ Link aktiv"; status.className = "status success";
         }
-      } catch(e) { status.textContent = "⚠️ Nur lokal"; }
+      } catch(e) { status.textContent = "⚠️ Fehler beim Upload"; }
     }
 
     window.copyLink = () => { navigator.clipboard.writeText(document.getElementById('shareLinkDisplay').textContent).then(() => alert("Kopiert!")); };
